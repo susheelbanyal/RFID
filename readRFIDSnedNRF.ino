@@ -45,7 +45,7 @@ void setup() {
   // Note that SPI pins on the reader must always be connected to certain
   // Arduino Pins (on an Uno, MOSI=> pin11, MISO=> pin12, SCK=>pin13
   // The Slave Select(SS) pin and reset pin can be assigned to any pin
-  //mfrc522.PCD_Init(SS_PIN, RST_PIN);    // Initialize MFRC522 Hardware
+  //mfrc522.PCD_Init(SS_PIN, RST_PIN);    // Initialize MFRC522 Hardware For single RFID
 
   for (uint8_t i = 0; i < numReaders; i++) {
     mfrc522[i].PCD_Init(ssPins[i], resetPin);
