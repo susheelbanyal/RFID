@@ -6,8 +6,11 @@
 #include <RF24.h>
 #include <printf.h>
 
-#define RST_PIN         8          // Configurable, see typical pin layout above
-#define SS_PIN          2         // Configurable, see typical pin layout above
+//#define RST_PIN         8          // Configurable, see typical pin layout above
+//#define SS_PIN          2         // Configurable, see typical pin layout above
+
+int RedLED = 4;// no authorize to scan
+int GreenLED = 5; //ready to scan
 
 const byte numReaders = 2;
 const byte ssPins[] = {2, 3};
@@ -21,7 +24,11 @@ bool rfid_tag_present_prev = false;
 bool rfid_tag_present = false;
 int _rfid_error_counter = 0;
 bool _tag_found = false;
+String EmployeeRFIDCode = "289708846";//"3802552960"; //3779262765
 
+unsigned long delayStart = 0;
+unsigned long AuthTime = 10000;
+bool authorizeTime = false;
 /**
    Configuraton for NRF24l01 sensor
 */
@@ -40,8 +47,17 @@ void setup() {
 #endif
 
   SPI.begin();      // Init SPI bus
+  delayStart = millis();
+  authorizeTime = false;
 
-  // Initialize reader
+  pinMode(RedLED, OUTPUT);
+  pinMode(GreenLED, OUTPUT);
+
+  //digitalWrite(GreenLED, LOW);
+  //digitalWrite(RedLED, HIGH);
+  ledOnOff(false);
+
+  // Initialize RFID readers
   // Note that SPI pins on the reader must always be connected to certain
   // Arduino Pins (on an Uno, MOSI=> pin11, MISO=> pin12, SCK=>pin13
   // The Slave Select(SS) pin and reset pin can be assigned to any pin
@@ -57,9 +73,7 @@ void setup() {
     Serial.print(F(". Version : "));
     mfrc522[i].PCD_DumpVersionToSerial();
   }
-
-
-
+  // initialize the NRF2401 Module
   radio.begin();
   radio.setPALevel(RF24_PA_MIN);
   radio.setChannel(0x76);
@@ -70,7 +84,7 @@ void setup() {
   radio.printDetails();
   Serial.print(F("--- END STUFF ---"));
 
-  //mfrc522.PCD_Init();   // Init MFRC522 Dont init here as we have 2 readers
+  //mfrc522.PCD_Init();   // Init MFRC522 Dont init here as we have 2 readers now
 }
 
 void loop() {
@@ -102,28 +116,62 @@ void loop() {
       }
       _rfid_error_counter = 0;
       _tag_found = true;
+
       readRFID = dump_byte_array(mfrc522[i].uid.uidByte, mfrc522[i].uid.size);
+
+      // start the timer
+      delayStart = millis(); // again set the timer to now
+
+      // Check if RFID is from Employee
+      if (readRFID == EmployeeRFIDCode) {
+        // here we got the EMP RFID CODE
+        authorizeTime = true; // start the timer
+        ledOnOff(true);// green light on
+      }
+    }
+    rfid_tag_present = _tag_found; // not emp tag
+  }
+
+  if (authorizeTime && ((millis() - delayStart) <= AuthTime)) { // still there is time
+    //Serial.println("In IF");
+
+    if (readRFID != EmployeeRFIDCode) { // allow others card scan
+      // rising edge
+      if (rfid_tag_present && !rfid_tag_present_prev) {
+        Serial.println("Tag found");
+        Serial.println(F("Card UID: "));
+        Serial.println(readRFID);
+        Serial.println(sizeof(readRFID));
+        Serial.println();
+        sendData(readRFID);
+      }
     }
 
-    rfid_tag_present = _tag_found;
-  }
-  // rising edge
-  if (rfid_tag_present && !rfid_tag_present_prev) {
-    Serial.println("Tag found");
-    Serial.print(F("Card UID: "));
-    Serial.print(readRFID);
-    Serial.print(sizeof(readRFID));
-    Serial.println();
+  } else {
+    authorizeTime = false; // Set false timer again
+    //Serial.println("You are not authorize to scan the watch.");
+    ledOnOff(false);// red light on
 
-    sendData(readRFID);
   }
 
-  // falling edge
+  // falling edge should not run for Emp
   if (!rfid_tag_present && rfid_tag_present_prev) {
     Serial.println("Tag gone");
+    Serial.println(">>>" + readRFID + "<<<");
+    Serial.println("Tag gone after");
     sendData("stop");
   }
 
+}
+
+void ledOnOff(bool flag) {
+  if (flag == true) { // // green light ON Red light OFF
+    digitalWrite(GreenLED, HIGH);
+    digitalWrite(RedLED, LOW);
+  } else {
+    digitalWrite(GreenLED, LOW);
+    digitalWrite(RedLED, HIGH);
+  }
 
 }
 
