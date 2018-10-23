@@ -12,6 +12,8 @@ from omxplayer.player import OMXPlayer
 from pathlib import Path
 from time import sleep
 import signal
+player=''
+playerRunning= False
 
 GPIO.setmode(GPIO.BCM)
 
@@ -48,6 +50,10 @@ def stopVideo():
 	global playerRunning
 	global player
 	#if 'player' in globals():
+	print('playerRunning')
+	print(playerRunning)
+	print('player')
+	print(player)
 	if playerRunning:
 		playerRunning = False
 		player.quit()
@@ -102,4 +108,3 @@ def end_read(signal,frame):
 
 # Hook the SIGINT
 signal.signal(signal.SIGINT, end_read)	
-
