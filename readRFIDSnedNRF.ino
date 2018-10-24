@@ -148,7 +148,7 @@ void loop() {
         Serial.println(sizeof(readRFID));
         Serial.println();
         ledOnOff("reading");
-        //sendData(readRFID);
+        sendData(readRFID);
       }
     }
   } else {
@@ -162,7 +162,7 @@ void loop() {
     Serial.println("Tag gone");
     if (authorizeTimeFlag && ((millis() - delayStart) <= AuthTime)) { //still have time
       ledOnOff("authorize");
-      //sendData("stop");// still have time to send the stop signal
+      sendData("stop");// still have time to send the stop signal
     } else {
       ledOnOff("block");
     }
