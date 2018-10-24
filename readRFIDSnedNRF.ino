@@ -11,6 +11,7 @@
 
 int RedLED = 4;// no authorize to scan
 int GreenLED = 5; //ready to scan
+int BlueLED = 6; //ready to scan
 
 const byte numReaders = 2;
 const byte ssPins[] = {2, 3};
@@ -24,11 +25,13 @@ bool rfid_tag_present_prev = false;
 bool rfid_tag_present = false;
 int _rfid_error_counter = 0;
 bool _tag_found = false;
-String EmployeeRFIDCode = "289708846";//"3802552960"; //3779262765
 
+
+String EmployeeRFIDCode = "289708846";//"3802552960"; //3779262765
 unsigned long delayStart = 0;
 unsigned long AuthTime = 10000;
-bool authorizeTime = false;
+bool authorizeTimeFlag = false;
+bool IsEmp = false;
 /**
    Configuraton for NRF24l01 sensor
 */
@@ -48,14 +51,15 @@ void setup() {
 
   SPI.begin();      // Init SPI bus
   delayStart = millis();
-  authorizeTime = false;
+  authorizeTimeFlag = false;
 
   pinMode(RedLED, OUTPUT);
   pinMode(GreenLED, OUTPUT);
+  pinMode(BlueLED, OUTPUT);
 
   //digitalWrite(GreenLED, LOW);
   //digitalWrite(RedLED, HIGH);
-  ledOnOff(false);
+  ledOnOff("block");
 
   // Initialize RFID readers
   // Note that SPI pins on the reader must always be connected to certain
@@ -119,22 +123,22 @@ void loop() {
 
       readRFID = dump_byte_array(mfrc522[i].uid.uidByte, mfrc522[i].uid.size);
 
-      // start the timer
+      // start the timer 
       delayStart = millis(); // again set the timer to now
 
       // Check if RFID is from Employee
       if (readRFID == EmployeeRFIDCode) {
         // here we got the EMP RFID CODE
-        authorizeTime = true; // start the timer
-        ledOnOff(true);// green light on
+        IsEmp = true;
+        authorizeTimeFlag = true; // start the timer
+        ledOnOff("authorize");// green light on
       }
     }
     rfid_tag_present = _tag_found; // not emp tag
-  }
 
-  if (authorizeTime && ((millis() - delayStart) <= AuthTime)) { // still there is time
-    //Serial.println("In IF");
+  }//MFRC522 for loop end
 
+  if (authorizeTimeFlag && ((millis() - delayStart) <= AuthTime)) { // still there is time
     if (readRFID != EmployeeRFIDCode) { // allow others card scan
       // rising edge
       if (rfid_tag_present && !rfid_tag_present_prev) {
@@ -143,32 +147,41 @@ void loop() {
         Serial.println(readRFID);
         Serial.println(sizeof(readRFID));
         Serial.println();
-        sendData(readRFID);
+        ledOnOff("reading");
+        //sendData(readRFID);
       }
     }
-
   } else {
-    authorizeTime = false; // Set false timer again
-    //Serial.println("You are not authorize to scan the watch.");
-    ledOnOff(false);// red light on
+    authorizeTimeFlag = false; // Set false timer again
+    ledOnOff("block");// red light on
 
   }
 
   // falling edge should not run for Emp
   if (!rfid_tag_present && rfid_tag_present_prev) {
     Serial.println("Tag gone");
-    Serial.println(">>>" + readRFID + "<<<");
-    Serial.println("Tag gone after");
-    sendData("stop");
+    if (authorizeTimeFlag && ((millis() - delayStart) <= AuthTime)) { //still have time
+      ledOnOff("authorize");
+      //sendData("stop");// still have time to send the stop signal
+    } else {
+      ledOnOff("block");
+    }
+    
   }
 
-}
+}// loop fun
 
-void ledOnOff(bool flag) {
-  if (flag == true) { // // green light ON Red light OFF
+void ledOnOff(String status) {
+  if (status == "authorize") { // authorize to scan card
     digitalWrite(GreenLED, HIGH);
     digitalWrite(RedLED, LOW);
-  } else {
+    digitalWrite(BlueLED, LOW);
+  } else if (status == "reading") { //reading tag
+    digitalWrite(BlueLED, HIGH);
+    digitalWrite(GreenLED, LOW);
+    digitalWrite(RedLED, LOW);
+  } else { //block [dont allow to scan]
+    digitalWrite(BlueLED, LOW);
     digitalWrite(GreenLED, LOW);
     digitalWrite(RedLED, HIGH);
   }
