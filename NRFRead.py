@@ -12,6 +12,7 @@ from omxplayer.player import OMXPlayer
 from pathlib import Path
 from time import sleep
 import signal
+
 player=''
 playerRunning= False
 
