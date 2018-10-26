@@ -154,7 +154,6 @@ void loop() {
   } else {
     authorizeTimeFlag = false; // Set false timer again
     ledOnOff("block");// red light on
-
   }
 
   // falling edge should not run for Emp
@@ -165,8 +164,7 @@ void loop() {
       sendData("stop");// still have time to send the stop signal
     } else {
       ledOnOff("block");
-    }
-    
+    }    
   }
 
 }// loop fun
@@ -191,10 +189,8 @@ void ledOnOff(String status) {
 void sendData(String data) {
   // Length (with one extra character for the null terminator)
   int str_len = data.length() + 1;
-
   // Prepare the character array (the buffer)
   char char_array[str_len];
-
   // Copy it over
   data.toCharArray(char_array, str_len);
   radio.write(&char_array, sizeof(char_array));
