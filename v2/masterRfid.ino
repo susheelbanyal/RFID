@@ -54,6 +54,8 @@ bool rfid_tag_present = false;
 int _rfid_error_counter = 0;
 bool _tag_found = false;
 
+
+
 // Auth configuration
 String EmployeeRFIDCode = "3802552960";
 
@@ -68,11 +70,12 @@ unsigned long authStartTime = 0; // When auth start
 unsigned long currentTime = 0;   // To hold current millis
 
 //LED signals for different for reading RFID process
-
+int currentReadingReader = 0;
 int RedLED = 4;   // no authorize to scan
 int GreenLED = 5; // ready to scan
-int BlueLED = 6;  // Card already scanned
 
+int BlueLED1 = 6;  // Card scanning
+int BlueLED2 = 7;
 //Initialization
 
 void setup()
@@ -94,7 +97,7 @@ void setup()
   pinMode(BlueLED, OUTPUT);
 
   // Initial red light on
-  ledOnOff("block");
+  ledOnOff("block", 0);
 
   // Initialize reader
   // Note that SPI pins on the reader must always be connected to certain
@@ -125,7 +128,7 @@ void loop()
   {
     Serial.println("------Time Up ------");
     auth = false;
-    ledOnOff("block"); // red light on
+    ledOnOff("block", 0); // red light on
   }
 
   rfid_tag_present_prev = rfid_tag_present;
@@ -162,6 +165,7 @@ void loop()
       _tag_found = true;
 
       readRFID = dump_byte_array(mfrc522[i].uid.uidByte, mfrc522[i].uid.size);
+      currentReadingReader = i+1; //not 0 as 0 is our default dummy parameter
     }
 
     rfid_tag_present = _tag_found; // not emp tag
@@ -188,7 +192,7 @@ void loop()
       Serial.println(readRFID + "==" + EmployeeRFIDCode);
       Serial.println("Auth true");
       auth = true;
-      ledOnOff("authorize");
+      ledOnOff("authorize", 0);
       authStartTime = millis();
     }
     else
@@ -197,12 +201,12 @@ void loop()
       Serial.println("=============In else===================");
       if (auth)
       {
-        ledOnOff("authorize");
+        ledOnOff("authorize", 0);
         Serial.println("=============Ready to send===================");
         authStartTime = millis();
         sendDataToNrf(readRFID, EmployeeRFIDCode);
       } else {
-        ledOnOff("block");
+        ledOnOff("block", 0);
       }
     }
   }
@@ -215,9 +219,9 @@ void loop()
     {
       Serial.println("====Tag on rfid and not emp tag then show blue===");
       arrayIndex = findIndexInArray(employeeArray, employeeArrayCount, readRFID);
-      if (arrayIndex == "-1"){
+      if (arrayIndex == "-1" && readRFID != ""){
       //if (EmployeeRFIDCode != readRFID && readRFID != "") {
-        ledOnOff("reading");
+        ledOnOff("reading", currentReadingReader);
       }
 
     }
@@ -229,34 +233,47 @@ void loop()
     Serial.println("Tag gone");
     if (auth)
     {      
-      ledOnOff("authorize");
+      ledOnOff("authorize",cuurentReadingReader);
       authStartTime = millis();
       sendDataToNrf("stop", "stop");
     } else {
-      ledOnOff("block");
+      ledOnOff("block",0);
     }
 
   }
 }
 
 // To handle the RGB leds senerios
-void ledOnOff(String status)
+void ledOnOff(String status, int reader)
 {
   if (status == "authorize")
   { // authorize to scan card
     digitalWrite(GreenLED, HIGH);
     digitalWrite(RedLED, LOW);
-    digitalWrite(BlueLED, LOW);
+    
+    digitalWrite(BlueLED1, LOW);
+    digitalWrite(BlueLED2, LOW);
   }
   else if (status == "reading")
   { //reading tag
-    digitalWrite(BlueLED, HIGH);
+    
+    if(reader == 1){
+      digitalWrite(BlueLED1, HIGH);
+      digitalWrite(BlueLED2, LOW);
+    }
+    if(reader == 2){
+      digitalWrite(BlueLED2, HIGH);
+       digitalWrite(BlueLED1, LOW);
+    }
+    
+    //digitalWrite(BlueLED, HIGH);
     digitalWrite(GreenLED, LOW);
     digitalWrite(RedLED, LOW);
   }
   else
   { //block [dont allow to scan]
-    digitalWrite(BlueLED, LOW);
+    digitalWrite(BlueLED1, LOW);
+    digitalWrite(BlueLED2, LOW);
     digitalWrite(GreenLED, LOW);
     digitalWrite(RedLED, HIGH);
   }
