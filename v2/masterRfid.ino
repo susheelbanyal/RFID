@@ -57,8 +57,8 @@ bool _tag_found = false;
 // Auth configuration
 String EmployeeRFIDCode = "3802552960";
 
-const byte employeeArrayCount = 4;
-String employeeArray[employeeArrayCount] = {"117880691", "2897088462", "3802552960", "3779262765"};
+const byte employeeArrayCount = 2;
+String employeeArray[employeeArrayCount] = {"3802552960", "3779262765"};
 
 String arrayIndex;
 
@@ -119,11 +119,11 @@ void setup()
 
 void loop()
 {
-
   currentTime = millis();
 
   if ((currentTime - authStartTime) >= lockTime && authStartTime != 0 && auth)
   {
+    Serial.println("------Time Up ------");
     auth = false;
     ledOnOff("block"); // red light on
   }
@@ -178,10 +178,10 @@ void loop()
     Serial.println();
 
     // Check if RFID exist in employee array
-    //arrayIndex = findIndexInArray(employeeArray, employeeArrayCount, readRFID);
+    arrayIndex = findIndexInArray(employeeArray, employeeArrayCount, readRFID);
 
-    if (EmployeeRFIDCode == readRFID)
-      //if (arrayIndex != readRFID)
+    //if (EmployeeRFIDCode == readRFID)
+      if (arrayIndex != "-1")
     {
       Serial.println("=============Admin card found===================");
       // Found
@@ -214,7 +214,9 @@ void loop()
     if (auth)
     {
       Serial.println("====Tag on rfid and not emp tag then show blue===");
-      if (EmployeeRFIDCode != readRFID) {
+      arrayIndex = findIndexInArray(employeeArray, employeeArrayCount, readRFID);
+      if (arrayIndex == "-1"){
+      //if (EmployeeRFIDCode != readRFID && readRFID != "") {
         ledOnOff("reading");
       }
 
@@ -299,10 +301,10 @@ String findIndexInArray(String a[], int num_elements, String value)
   int i;
   for (i = 0; i < num_elements; i++)
   {
-    if (a[i] == value)
+    if (a[i] == value && sizeof(value) > 0)
     {
       return (value); // it was found
     }
   }
-  return (-1); // if it was not found
+  return "-1"; // if it was not found
 }
