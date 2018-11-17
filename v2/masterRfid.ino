@@ -1,26 +1,4 @@
-// master
-/*
-  #include <Wire.h>
-
-  void setup() {
-  Wire.begin(); // join i2c bus (address optional for master)
-  }
-
-  byte x = 0;
-
-  void loop() {
-  Wire.beginTransmission(8); // transmit to device #8
-  Wire.write("x is ");        // sends five bytes
-  Wire.write(x);              // sends one byte
-  Wire.endTransmission();    // stop transmitting
-
-  x++;
-  delay(500);
-  }
-*/
-
 #define DEBUG
-
 // LIBERARIES
 #include <SPI.h>
 #include <MFRC522.h> //https://github.com/miguelbalboa/rfid
@@ -86,16 +64,13 @@ void setup()
   printf_begin();
   Serial.println(F("Serial communication started"));
 #endif
-
   Wire.begin();
-
   SPI.begin(); // Init SPI bus
-
   // Set digital pins as output
   pinMode(RedLED, OUTPUT);
   pinMode(GreenLED, OUTPUT);
-  pinMode(BlueLED, OUTPUT);
-
+  pinMode(BlueLED1, OUTPUT);
+  pinMode(BlueLED2, OUTPUT);
   // Initial red light on
   ledOnOff("block", 0);
 
@@ -233,7 +208,7 @@ void loop()
     Serial.println("Tag gone");
     if (auth)
     {      
-      ledOnOff("authorize",cuurentReadingReader);
+      ledOnOff("authorize",currentReadingReader);
       authStartTime = millis();
       sendDataToNrf("stop", "stop");
     } else {
@@ -246,6 +221,8 @@ void loop()
 // To handle the RGB leds senerios
 void ledOnOff(String status, int reader)
 {
+  Serial.print("==========Reader #");
+  Serial.println(reader);
   if (status == "authorize")
   { // authorize to scan card
     digitalWrite(GreenLED, HIGH);
