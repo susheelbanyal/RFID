@@ -56,8 +56,7 @@ int BlueLED1 = 6;  // Card scanning
 int BlueLED2 = 7;
 //Initialization
 
-void setup()
-{
+void setup(){
 #ifdef DEBUG
   // Initialise  serial communications channel with PC
   Serial.begin(9600);
@@ -80,8 +79,7 @@ void setup()
   // The Slave Select(SS) pin and reset pin can be assigned to any pin
   // Initialize MFRC522 Hardware
 
-  for (uint8_t i = 0; i < numReaders; i++)
-  {
+  for (uint8_t i = 0; i < numReaders; i++){
     mfrc522[i].PCD_Init(ssPins[i], resetPin);
     Serial.println(F("Reader #"));
     Serial.println(F(" initialised on pin "));
@@ -95,12 +93,10 @@ void setup()
   Serial.print(F("--- END STUFF ---"));
 }
 
-void loop()
-{
+void loop(){
   currentTime = millis();
 
-  if ((currentTime - authStartTime) >= lockTime && authStartTime != 0 && auth)
-  {
+  if ((currentTime - authStartTime) >= lockTime && authStartTime != 0 && auth){
     Serial.println("------Time Up ------");
     auth = false;
     ledOnOff("block", 0); // red light on
@@ -109,8 +105,7 @@ void loop()
   rfid_tag_present_prev = rfid_tag_present;
 
   _rfid_error_counter += 1;
-  if (_rfid_error_counter > 2)
-  {
+  if (_rfid_error_counter > 2){
     _tag_found = false;
   }
 
@@ -119,8 +114,7 @@ void loop()
   byte bufferSize = sizeof(bufferATQA);
   String readRFID = "";
 
-  for (uint8_t i = 0; i < numReaders; i++)
-  {
+  for (uint8_t i = 0; i < numReaders; i++){
     mfrc522[i].PCD_Init();
     // Reset baud rates
     mfrc522[i].PCD_WriteRegister(mfrc522[i].TxModeReg, 0x00);
@@ -148,8 +142,7 @@ void loop()
   } //MFRC522 for loop end
 
   // rising edge
-  if (rfid_tag_present && !rfid_tag_present_prev)
-  {
+  if (rfid_tag_present && !rfid_tag_present_prev){
     Serial.println("Tag found");
     Serial.println(F("Card UID: "));
     Serial.println();
@@ -158,10 +151,7 @@ void loop()
 
     // Check if RFID exist in employee array
     arrayIndex = findIndexInArray(employeeArray, employeeArrayCount, readRFID);
-
-    //if (EmployeeRFIDCode == readRFID)
-      if (arrayIndex != "-1")
-    {
+    if (arrayIndex != "-1"){
       Serial.println("=============Admin card found===================");
       // Found
       Serial.println(readRFID + "==" + EmployeeRFIDCode);
@@ -169,13 +159,10 @@ void loop()
       auth = true;
       ledOnOff("authorize", 0);
       authStartTime = millis();
-    }
-    else
-    {
+    } else {
       // Not Found
       Serial.println("=============In else===================");
-      if (auth)
-      {
+      if (auth){
         ledOnOff("authorize", 0);
         Serial.println("=============Ready to send===================");
         authStartTime = millis();
@@ -187,53 +174,43 @@ void loop()
   }
 
   // If a tag is present on RFID reader
-  if (rfid_tag_present && rfid_tag_present_prev)
-  {
+  if (rfid_tag_present && rfid_tag_present_prev){
     authStartTime = millis();
-    if (auth)
-    {
+    if (auth) {
       Serial.println("====Tag on rfid and not emp tag then show blue===");
       arrayIndex = findIndexInArray(employeeArray, employeeArrayCount, readRFID);
-      if (arrayIndex == "-1" && readRFID != ""){
-      //if (EmployeeRFIDCode != readRFID && readRFID != "") {
+      if (arrayIndex == "-1" && readRFID != ""){      
         ledOnOff("reading", currentReadingReader);
       }
-
     }
   }
 
   // If tag is picked up from RFID reader
-  if (!rfid_tag_present && rfid_tag_present_prev)
-  {
+  if (!rfid_tag_present && rfid_tag_present_prev) {
     Serial.println("Tag gone");
-    if (auth)
-    {      
+    if (auth){      
       ledOnOff("authorize",currentReadingReader);
       authStartTime = millis();
       sendDataToNrf("stop", "stop");
     } else {
       ledOnOff("block",0);
     }
-
   }
 }
 
 // To handle the RGB leds senerios
-void ledOnOff(String status, int reader)
-{
+void ledOnOff(String status, int reader){
   Serial.print("==========Reader #");
   Serial.println(reader);
-  if (status == "authorize")
-  { // authorize to scan card
+
+  if (status == "authorize") { // authorize to scan card
     digitalWrite(GreenLED, HIGH);
     digitalWrite(RedLED, LOW);
     
     digitalWrite(BlueLED1, LOW);
     digitalWrite(BlueLED2, LOW);
-  }
-  else if (status == "reading")
-  { //reading tag
-    
+
+  } else if (status == "reading"){ //reading tag    
     if(reader == 1){
       digitalWrite(BlueLED1, HIGH);
       digitalWrite(BlueLED2, LOW);
@@ -241,14 +218,10 @@ void ledOnOff(String status, int reader)
     if(reader == 2){
       digitalWrite(BlueLED2, HIGH);
        digitalWrite(BlueLED1, LOW);
-    }
-    
-    //digitalWrite(BlueLED, HIGH);
+    }        
     digitalWrite(GreenLED, LOW);
     digitalWrite(RedLED, LOW);
-  }
-  else
-  { //block [dont allow to scan]
+  } else { //block [dont allow to scan]
     digitalWrite(BlueLED1, LOW);
     digitalWrite(BlueLED2, LOW);
     digitalWrite(GreenLED, LOW);
@@ -257,8 +230,7 @@ void ledOnOff(String status, int reader)
 }
 
 // Send data to NRF module through Serial communication to other arduino using TX/RX pins
-void sendDataToNrf(String rfid, String employeeId)
-{
+void sendDataToNrf(String rfid, String employeeId){
 
   Serial.println("======TRANSMITTING TO SLAVE ========");
   Serial.println(rfid);
@@ -272,15 +244,12 @@ void sendDataToNrf(String rfid, String employeeId)
 }
 
 // To convert RFID hexadecimal to string
-String dump_byte_array(byte *buffer, byte bufferSize)
-{
+String dump_byte_array(byte *buffer, byte bufferSize){
   //   String s;
   unsigned long uiddec = 0;
-  for (byte m = (bufferSize > 4 ? (bufferSize - 4) : 0); m < bufferSize; m++)
-  {
+  for (byte m = (bufferSize > 4 ? (bufferSize - 4) : 0); m < bufferSize; m++) {
     unsigned long p = 1;
-    for (int k = 0; k < bufferSize - m - 1; k++)
-    {
+    for (int k = 0; k < bufferSize - m - 1; k++){
       p = p * 256;
     }
     uiddec += p * buffer[m];
@@ -289,14 +258,10 @@ String dump_byte_array(byte *buffer, byte bufferSize)
 }
 
 // To find an element in an array(https://phanderson.com/C/find_idx.html)
-String findIndexInArray(String a[], int num_elements, String value)
-{
-
+String findIndexInArray(String a[], int num_elements, String value){
   int i;
-  for (i = 0; i < num_elements; i++)
-  {
-    if (a[i] == value && sizeof(value) > 0)
-    {
+  for (i = 0; i < num_elements; i++){
+    if (a[i] == value && sizeof(value) > 0){
       return (value); // it was found
     }
   }
