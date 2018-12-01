@@ -33,6 +33,10 @@ int _rfid_error_counter = 0;
 bool _tag_found = false;
 
 
+bool rfid_tag_present_prev2 = false;
+bool rfid_tag_present2 = false;
+int currentReadingReader1 = 0;
+int currentReadingReader2 = 0;
 
 // Auth configuration
 String EmployeeRFIDCode = "3802552960";
@@ -40,7 +44,7 @@ String EmployeeRFIDCode = "3802552960";
 const byte employeeArrayCount = 2;
 String employeeArray[employeeArrayCount] = {"3802552960", "3779262765"};
 
-String arrayIndex;
+
 
 bool auth = false;
 unsigned long lockTime = 10000;  // 10 sec
@@ -48,7 +52,7 @@ unsigned long authStartTime = 0; // When auth start
 unsigned long currentTime = 0;   // To hold current millis
 
 //LED signals for different for reading RFID process
-int currentReadingReader = 0;
+
 int RedLED = 4;   // no authorize to scan
 int GreenLED = 5; // ready to scan
 
@@ -70,6 +74,7 @@ void setup(){
   pinMode(GreenLED, OUTPUT);
   pinMode(BlueLED1, OUTPUT);
   pinMode(BlueLED2, OUTPUT);
+
   // Initial red light on
   ledOnOff("block", 0);
 
@@ -103,6 +108,7 @@ void loop(){
   }
 
   rfid_tag_present_prev = rfid_tag_present;
+  rfid_tag_present_prev2 = rfid_tag_present2;
 
   _rfid_error_counter += 1;
   if (_rfid_error_counter > 2){
@@ -113,6 +119,8 @@ void loop(){
   byte bufferATQA[2];
   byte bufferSize = sizeof(bufferATQA);
   String readRFID = "";
+  String readRFID1 = "";
+  String readRFID2 = "";
 
   for (uint8_t i = 0; i < numReaders; i++){
     mfrc522[i].PCD_Init();
@@ -124,49 +132,61 @@ void loop(){
 
     MFRC522::StatusCode result = mfrc522[i].PICC_RequestA(bufferATQA, &bufferSize);
 
-    if (result == mfrc522[i].STATUS_OK)
-    {
-      if (!mfrc522[i].PICC_ReadCardSerial())
-      { //Since a PICC placed get Serial and continue
+    if (result == mfrc522[i].STATUS_OK){
+      if (!mfrc522[i].PICC_ReadCardSerial()){ //Since a PICC placed get Serial and continue
         return;
       }
       _rfid_error_counter = 0;
-      _tag_found = true;
+      
 
       readRFID = dump_byte_array(mfrc522[i].uid.uidByte, mfrc522[i].uid.size);
-      currentReadingReader = i+1; //not 0 as 0 is our default dummy parameter
+      
+      if(i+1 == 1){
+        readRFID1 = readRFID;
+        rfid_tag_present = true;
+        currentReadingReader1 = i+1; //not 0 as 0 is our default dummy parameter
+      }
+      if(i+1 == 2){
+        readRFID2 = readRFID;
+        rfid_tag_present2 = true;
+        currentReadingReader2 = i+1; //not 0 as 0 is our default dummy parameter
+      }
     }
 
-    rfid_tag_present = _tag_found; // not emp tag
 
   } //MFRC522 for loop end
 
   // rising edge
-  if (rfid_tag_present && !rfid_tag_present_prev){
-    Serial.println("Tag found");
+  if ((rfid_tag_present && !rfid_tag_present_prev) || (rfid_tag_present2 && !rfid_tag_present_prev2)){
     Serial.println(F("Card UID: "));
-    Serial.println();
-    Serial.println(sizeof(readRFID));
     Serial.println();
 
     // Check if RFID exist in employee array
-    arrayIndex = findIndexInArray(employeeArray, employeeArrayCount, readRFID);
-    if (arrayIndex != "-1"){
+    String arrayIndex1 = findIndexInArray(employeeArray, employeeArrayCount, readRFID1);
+    String arrayIndex2 = findIndexInArray(employeeArray, employeeArrayCount, readRFID2);
+    
+    if (arrayIndex1 != "-1" || arrayIndex2 != "-1"){
+
+      if(readRFID1 != ""){
+        EmployeeRFIDCode = arrayIndex1;
+      }
+      if(readRFID2 !=""){
+        EmployeeRFIDCode = arrayIndex2;
+      }
       Serial.println("=============Admin card found===================");
-      // Found
-      Serial.println(readRFID + "==" + EmployeeRFIDCode);
+      Serial.println(readRFID1 + "==1==" + readRFID1 +"==2=="+EmployeeRFIDCode);
       Serial.println("Auth true");
       auth = true;
       ledOnOff("authorize", 0);
       authStartTime = millis();
     } else {
-      // Not Found
+      // Not admin card
       Serial.println("=============In else===================");
       if (auth){
         ledOnOff("authorize", 0);
         Serial.println("=============Ready to send===================");
         authStartTime = millis();
-        sendDataToNrf(readRFID, EmployeeRFIDCode);
+        sendDataToNrf(readRFID1, readRFID2, EmployeeRFIDCode);
       } else {
         ledOnOff("block", 0);
       }
@@ -174,29 +194,57 @@ void loop(){
   }
 
   // If a tag is present on RFID reader
-  if (rfid_tag_present && rfid_tag_present_prev){
+  if ((rfid_tag_present && rfid_tag_present_prev) || (rfid_tag_present2 && rfid_tag_present_prev2)){
     authStartTime = millis();
     if (auth) {
       Serial.println("====Tag on rfid and not emp tag then show blue===");
-      arrayIndex = findIndexInArray(employeeArray, employeeArrayCount, readRFID);
-      if (arrayIndex == "-1" && readRFID != ""){      
-        ledOnOff("reading", currentReadingReader);
+      String arrayIndex1 = findIndexInArray(employeeArray, employeeArrayCount, readRFID1);
+      String arrayIndex2 = findIndexInArray(employeeArray, employeeArrayCount, readRFID2);
+      Serial.println(arrayIndex1);
+      Serial.println(arrayIndex2);
+      Serial.println("=========================================");
+      if ((arrayIndex1 == "-1") || (arrayIndex2 == "-1" )){     
+        
+        if(readRFID1 != "") {
+          ledOnOff("reading", currentReadingReader1);
+        }
+
+        if(readRFID2 != "") {
+          ledOnOff("reading", currentReadingReader2);
+        }
       }
     }
   }
 
   // If tag is picked up from RFID reader
-  if (!rfid_tag_present && rfid_tag_present_prev) {
+  if ((!rfid_tag_present && rfid_tag_present_prev) || (!rfid_tag_present2 && rfid_tag_present_prev2)){
     Serial.println("Tag gone");
-    if (auth){      
-      ledOnOff("authorize",currentReadingReader);
+    if (auth){
+      // if any readRFID# empty then show green light again
+      if(readRFID1 == "") {
+        ledOnOff("authorize", currentReadingReader1);
+      }
+      if(readRFID2 == "") {
+        ledOnOff("authorize", currentReadingReader2);
+      }
+      
       authStartTime = millis();
-      sendDataToNrf("stop", "stop");
+      sendDataToNrf("stop", "stop", EmployeeRFIDCode);
     } else {
       ledOnOff("block",0);
     }
   }
 }
+
+
+
+
+
+
+
+
+
+
 
 // To handle the RGB leds senerios
 void ledOnOff(String status, int reader){
@@ -230,13 +278,18 @@ void ledOnOff(String status, int reader){
 }
 
 // Send data to NRF module through Serial communication to other arduino using TX/RX pins
-void sendDataToNrf(String rfid, String employeeId){
+void sendDataToNrf(String rfid1, String rfid2, String employeeId){
 
   Serial.println("======TRANSMITTING TO SLAVE ========");
-  Serial.println(rfid);
+  Serial.println("===== rfids start========");
+  Serial.println(rfid1);
+  Serial.println(rfid2);
+  Serial.println("===== rfids end ========");
   Wire.beginTransmission(8); // transmit to device #8
 
-  Wire.write(rfid.c_str());
+  Wire.write(rfid1.c_str());
+  Wire.write("-");
+    Wire.write(rfid2.c_str());
   Wire.write("-");
   Wire.write(employeeId.c_str());
   Wire.endTransmission();
