@@ -183,7 +183,7 @@ void loop(){
       if(readRFID1 == "") {
         ledOnOff("block", currentReadingReader1);
       } else {
-        stop1=readRFID1;
+        stop1 = readRFID1;
       }
       if(readRFID2 == "") {
         ledOnOff("block", currentReadingReader2);
