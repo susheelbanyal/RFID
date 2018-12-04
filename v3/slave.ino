@@ -4,7 +4,22 @@
 #include <RF24.h> //http://maniacbug.github.com/RF24
 #include <printf.h>
 RF24 radio(9, 10);
+
+#define red   5
+#define blue 4
+#define green 3
+#define lipo  A0
+
+
+float lipoV = 0;
 void setup() {
+
+  pinMode(red,OUTPUT);
+  pinMode(blue,OUTPUT);
+  pinMode(green,OUTPUT);
+  pinMode(lipo,INPUT);
+
+  
   Wire.begin(8); // join i2c bus with address #4
   SPI.begin(); // Init SPI bus
   Wire.onReceive(receiveEvent); // register event
@@ -30,6 +45,23 @@ void setup() {
 
 void loop () {
   delay(100);
+  lipoV = analogRead(lipo);
+  Serial.println(lipoV);
+  if(lipoV<650){
+  digitalWrite(red,HIGH);
+  digitalWrite(blue,LOW);
+  digitalWrite(green,LOW);
+  }
+  if(lipoV>800 && lipoV<950){
+    digitalWrite(red,LOW);
+    digitalWrite(blue,HIGH);
+    digitalWrite(green,LOW);
+  }
+  if(lipoV>950){
+    digitalWrite(red,LOW);
+    digitalWrite(blue,LOW);
+    digitalWrite(green,HIGH);
+  }
 }
 void receiveEvent(int howMany)
 {
@@ -55,10 +87,6 @@ Serial.println(data);
     }
   }
 
-  //Serial.println("=====productId1====");
-  //Serial.println(productId1);
-  //Serial.println("=====productId2====");
-  //Serial.println(productId2);
   delay(500);
   sendData(productId1, productId2);
   
